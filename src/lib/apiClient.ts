@@ -214,6 +214,68 @@ export interface CreateTapSlotRequest {
   position: number
 }
 
+export interface Promo {
+  id: number
+  organization_id: number
+  pub_id: number | null
+  product_id: number | null
+  product_type: string | null
+  name: string
+  discount_percent: number
+  valid_from: string
+  valid_to: string | null
+  recurrent: boolean
+  recurrent_days: number[] | null
+  recurrent_time_from: string | null
+  recurrent_time_to: string | null
+  active: boolean
+  priority: number
+  created_at: string
+  updated_at: string
+  created_by: string | null
+}
+
+export interface CreatePromoRequest {
+  organization_id: number
+  pub_id?: number | null
+  product_id?: number | null
+  product_type?: string | null
+  name: string
+  discount_percent: number
+  valid_from?: string
+  valid_to?: string | null
+  recurrent: boolean
+  recurrent_days?: number[]
+  recurrent_time_from?: string | null
+  recurrent_time_to?: string | null
+  priority?: number
+}
+
+export interface UpdatePromoRequest {
+  promo_id: number
+  pub_id?: number | null
+  product_id?: number | null
+  product_type?: string | null
+  name?: string
+  discount_percent?: number
+  valid_from?: string
+  valid_to?: string | null
+  recurrent?: boolean
+  recurrent_days?: number[]
+  recurrent_time_from?: string | null
+  recurrent_time_to?: string | null
+  active?: boolean
+  priority?: number
+}
+
+export interface PromoListParams {
+  organizationId: number
+  pubId?: number
+  page?: number
+  limit?: number
+  activeOnly?: boolean
+}
+
 export interface TapSlot {
   id: number
   organization_id: number
@@ -467,6 +529,81 @@ class ApiClient {
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}))
       throw new Error(errorData.error || `Failed to remove user: ${response.statusText}`)
+    }
+
+    return response.json()
+  }
+
+  async createPromo(session: any, data: CreatePromoRequest): Promise<Promo> {
+    const response = await fetch(`${API_BASE_URL}/user/promo/create`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(session),
+      body: JSON.stringify(data),
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}))
+      throw new Error(errorData.error || `Failed to create promo: ${response.statusText}`)
+    }
+
+    return response.json()
+  }
+
+  async updatePromo(session: any, data: UpdatePromoRequest): Promise<{ message: string }> {
+    const response = await fetch(`${API_BASE_URL}/user/promo/update`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(session),
+      body: JSON.stringify(data),
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}))
+      throw new Error(errorData.error || `Failed to update promo: ${response.statusText}`)
+    }
+
+    return response.json()
+  }
+
+  async listPromos(session: any, params: PromoListParams): Promise<PaginatedProductsResponse<Promo>> {
+    const searchParams = new URLSearchParams({
+      organization_id: params.organizationId.toString(),
+    })
+
+    if (params.pubId) {
+      searchParams.append('pub_id', params.pubId.toString())
+    }
+    if (params.page) {
+      searchParams.append('page', params.page.toString())
+    }
+    if (params.limit) {
+      searchParams.append('limit', params.limit.toString())
+    }
+    if (params.activeOnly) {
+      searchParams.append('active_only', 'true')
+    }
+
+    const response = await fetch(`${API_BASE_URL}/user/promo/list?${searchParams}`, {
+      method: 'GET',
+      headers: this.getAuthHeaders(session),
+    })
+
+    if (!response.ok) {
+      throw new Error(`Failed to list promos: ${response.statusText}`)
+    }
+
+    return response.json()
+  }
+
+  async deletePromo(session: any, promoId: number): Promise<{ message: string }> {
+    const response = await fetch(`${API_BASE_URL}/user/promo/delete`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(session),
+      body: JSON.stringify({ promo_id: promoId }),
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}))
+      throw new Error(errorData.error || `Failed to delete promo: ${response.statusText}`)
     }
 
     return response.json()

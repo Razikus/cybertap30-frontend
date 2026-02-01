@@ -17,7 +17,8 @@ import {
   Building2,
   Factory,
   FileText,
-  Users
+  Users,
+  Tag
 } from "lucide-react"
 
 function OrganizationLayout({ children }: { children: React.ReactNode }) {
@@ -90,7 +91,7 @@ function OrganizationLayout({ children }: { children: React.ReactNode }) {
   // Pub-level categories
   const pubCategories = [
       'devices', 'warehouse',
-    ...(hasManagerAccess ? ['statistics'] : []),
+    ...(hasManagerAccess ? ["promos", 'statistics'] : []),
   ]
 
   const togglePub = (pubId: number) => {
@@ -264,6 +265,10 @@ function OrganizationLayout({ children }: { children: React.ReactNode }) {
                                           case 'statistics':
                                             categoryName = 'Statystyki'
                                             CategoryIcon = BarChart3
+                                            break
+                                          case 'promos':
+                                            categoryName = 'Promocje'
+                                            CategoryIcon = Tag
                                             break
                                         }
 
