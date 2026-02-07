@@ -81,6 +81,70 @@ export interface PaginatedProductsResponse<T> {
   pagination: PaginationMeta
 }
 
+export interface UpdateBeerRequest {
+  id: number
+  name: string
+  main_image_resource_uuid?: string | null
+  glass_image_resource_uuid?: string | null
+  bitterness: number
+  sweetness: number
+  acidity: number
+  extract: number
+  alcohol: number
+  brewery: string
+  style: string
+  price_per_visible_volume: number
+  visible_volume: number
+  default_warehouse_volume: number
+  active: boolean
+}
+
+export interface UpdateHardRequest {
+  id: number
+  name: string
+  main_image_resource_uuid?: string | null
+  glass_image_resource_uuid?: string | null
+  sweetness: number
+  smokyness: number
+  wood: number
+  strongness: number
+  extract: number
+  alcohol: number
+  style: string
+  price_per_visible_volume: number
+  visible_volume: number
+  default_warehouse_volume: number
+  active: boolean
+}
+
+export interface UpdateWineRequest {
+  id: number
+  name: string
+  main_image_resource_uuid?: string | null
+  glass_image_resource_uuid?: string | null
+  bitterness: number
+  sweetness: number
+  acidity: number
+  extract: number
+  alcohol: number
+  style: string
+  price_per_visible_volume: number
+  visible_volume: number
+  default_warehouse_volume: number
+  active: boolean
+}
+
+export interface UpdateNonAlcoholicRequest {
+  id: number
+  name: string
+  main_image_resource_uuid?: string | null
+  glass_image_resource_uuid?: string | null
+  price_per_visible_volume: number
+  visible_volume: number
+  default_warehouse_volume: number
+  active: boolean
+}
+
 
 export interface TapDeviceInfo {
   id: number
@@ -196,6 +260,36 @@ export interface CreateWineRequest {
   visible_volume: number
   default_warehouse_volume: number
   org_id: number
+}
+
+
+export interface LuckyPourConfig {
+  id: number
+  organization_id: number
+  pub_id: number
+  enabled: boolean
+  chance_percent: number
+  reward_amount: number
+  min_pour_volume: number | null
+  min_pour_cost: number | null
+  max_wins_per_day_per_account: number | null
+  max_wins_per_shift: number | null
+  daily_budget: number | null
+  created_at: string
+  updated_at: string
+  created_by: string | null
+}
+
+export interface UpsertLuckyPourRequest {
+  pub_id: number
+  enabled: boolean
+  chance_percent: number
+  reward_amount: number
+  min_pour_volume?: number | null
+  min_pour_cost?: number | null
+  max_wins_per_day_per_account?: number | null
+  max_wins_per_shift?: number | null
+  daily_budget?: number | null
 }
 
 export interface CreateNonAlcoholicRequest {
@@ -391,6 +485,8 @@ export interface WarehouseItem {
   product_uuid: string
   price_per_visible_volume: number
   visible_volume: number
+  tap_assignment_id: number | null
+  tap_slot_position: number | null
 }
 
 
@@ -461,6 +557,66 @@ class ApiClient {
       'Authorization': `Bearer ${session.access_token}`,
       'Content-Type': 'application/json',
     }
+  }
+
+  async getLuckyPourConfig(session: any, pubId: number): Promise<LuckyPourConfig | null> {
+    const response = await fetch(`${API_BASE_URL}/user/game/luckypour/get`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(session),
+      body: JSON.stringify({ pub_id: pubId }),
+    })
+
+    if (!response.ok) {
+      throw new Error(`Failed to get lucky pour config: ${response.statusText}`)
+    }
+
+    const data = await response.json()
+    return data || null
+  }
+
+  async upsertLuckyPourConfig(session: any, data: UpsertLuckyPourRequest): Promise<LuckyPourConfig> {
+    const response = await fetch(`${API_BASE_URL}/user/game/luckypour/upsert`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(session),
+      body: JSON.stringify(data),
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}))
+      throw new Error(errorData.error || `Failed to upsert lucky pour config: ${response.statusText}`)
+    }
+
+    return response.json()
+  }
+
+  async toggleLuckyPour(session: any, pubId: number, enabled: boolean): Promise<{ message: string }> {
+    const response = await fetch(`${API_BASE_URL}/user/game/luckypour/toggle`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(session),
+      body: JSON.stringify({ pub_id: pubId, enabled }),
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}))
+      throw new Error(errorData.error || `Failed to toggle lucky pour: ${response.statusText}`)
+    }
+
+    return response.json()
+  }
+
+  async deleteLuckyPourConfig(session: any, pubId: number): Promise<{ message: string }> {
+    const response = await fetch(`${API_BASE_URL}/user/game/luckypour/delete`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(session),
+      body: JSON.stringify({ pub_id: pubId }),
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}))
+      throw new Error(errorData.error || `Failed to delete lucky pour config: ${response.statusText}`)
+    }
+
+    return response.json()
   }
 
 
@@ -563,6 +719,101 @@ class ApiClient {
 
     return response.json()
   }
+
+  async setTapSlotPrecision(session: any, tapSlotId: number, precision: number): Promise<{message: string, tap_slot: TapSlot}> {
+    const response = await fetch(`${API_BASE_URL}/user/device/precision`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(session),
+      body: JSON.stringify({
+        tap_slot_id: tapSlotId,
+        precision: precision
+      }),
+    })
+
+    if (!response.ok) {
+      throw new Error(`Failed to set tap slot precision: ${response.statusText}`)
+    }
+
+    return response.json()
+  }
+
+  async unassignTapSlot(session: any, tapSlotId: number): Promise<{message: string}> {
+    const response = await fetch(`${API_BASE_URL}/user/tapslot/unassign`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(session),
+      body: JSON.stringify({ tap_slot_id: tapSlotId }),
+    })
+
+    if (!response.ok) {
+      throw new Error(`Failed to unassign tap slot: ${response.statusText}`)
+    }
+
+    return response.json()
+  }
+
+  async updateBeer(session: any, data: UpdateBeerRequest): Promise<{message: string, beer_id: number}> {
+    const response = await fetch(`${API_BASE_URL}/user/beer/update`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(session),
+      body: JSON.stringify(data),
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}))
+      throw new Error(errorData.error || `Failed to update beer: ${response.statusText}`)
+    }
+
+    return response.json()
+  }
+
+  async updateHard(session: any, data: UpdateHardRequest): Promise<{message: string, hard_id: number}> {
+    const response = await fetch(`${API_BASE_URL}/user/hard/update`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(session),
+      body: JSON.stringify(data),
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}))
+      throw new Error(errorData.error || `Failed to update hard: ${response.statusText}`)
+    }
+
+    return response.json()
+  }
+
+  async updateWine(session: any, data: UpdateWineRequest): Promise<{message: string, wine_id: number}> {
+    const response = await fetch(`${API_BASE_URL}/user/wine/update`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(session),
+      body: JSON.stringify(data),
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}))
+      throw new Error(errorData.error || `Failed to update wine: ${response.statusText}`)
+    }
+
+    return response.json()
+  }
+
+  async updateNonAlcoholic(session: any, data: UpdateNonAlcoholicRequest): Promise<{message: string, non_alco_id: number}> {
+    const response = await fetch(`${API_BASE_URL}/user/nonalco/update`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(session),
+      body: JSON.stringify(data),
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}))
+      throw new Error(errorData.error || `Failed to update non-alcoholic: ${response.statusText}`)
+    }
+
+    return response.json()
+  }
+
+
+
+
 
   async listPromos(session: any, params: PromoListParams): Promise<PaginatedProductsResponse<Promo>> {
     const searchParams = new URLSearchParams({

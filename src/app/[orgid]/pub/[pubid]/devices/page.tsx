@@ -159,19 +159,37 @@ export default function PubDevicesPage() {
   }
 
   const handleUpdatePrecision = async () => {
-    if (!selectedSlot || !session) return
-    
-    // TODO: Implement precision update endpoint
-    toast.info('Funkcja w przygotowaniu')
-    setPrecisionDialogOpen(false)
+    if (!selectedSlot || !session || !newPrecision) return
+
+    setSubmitting(true)
+    try {
+      await apiClient.setTapSlotPrecision(session, selectedSlot.id, parseFloat(newPrecision))
+      toast.success(`Precyzja kranu ${selectedSlot.position} zaktualizowana`)
+      setPrecisionDialogOpen(false)
+      fetchTapSlots()
+    } catch (error) {
+      console.error('Failed to update precision:', error)
+      toast.error('Nie udało się zaktualizować precyzji')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   const handleUnload = async () => {
     if (!selectedSlot || !session) return
-    
-    // TODO: Implement unload endpoint (take off TapAssignment)
-    toast.info('Funkcja w przygotowaniu')
-    setUnloadDialogOpen(false)
+
+    setSubmitting(true)
+    try {
+      await apiClient.unassignTapSlot(session, selectedSlot.id)
+      toast.success(`Produkt odładowany z kranu ${selectedSlot.position}`)
+      setUnloadDialogOpen(false)
+      fetchTapSlots()
+    } catch (error) {
+      console.error('Failed to unload:', error)
+      toast.error('Nie udało się odładować produktu')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   const getProgressPercentage = (slot: TapSlot) => {

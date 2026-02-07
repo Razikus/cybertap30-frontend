@@ -18,7 +18,8 @@ import {
   Factory,
   FileText,
   Users,
-  Tag
+  Tag,
+  Dices
 } from "lucide-react"
 
 function OrganizationLayout({ children }: { children: React.ReactNode }) {
@@ -91,7 +92,7 @@ function OrganizationLayout({ children }: { children: React.ReactNode }) {
   // Pub-level categories
   const pubCategories = [
       'devices', 'warehouse',
-    ...(hasManagerAccess ? ["promos", 'statistics'] : []),
+    ...(hasManagerAccess ? ["promos", 'statistics', 'games'] : []),
   ]
 
   const togglePub = (pubId: number) => {
@@ -140,7 +141,8 @@ function OrganizationLayout({ children }: { children: React.ReactNode }) {
       'stats': 'Statystyki',
       'warehouse': 'Magazyn',
       'settings': 'Ustawienia',
-      'users': 'Użytkownicy'
+      'users': 'Użytkownicy',
+      'games': 'Gry',
     }
 
     return titleMap[lastPart] || 'Dashboard'
@@ -167,7 +169,6 @@ function OrganizationLayout({ children }: { children: React.ReactNode }) {
                 {sidebarOpen && (
                     <div>
                       <h2 className="text-lg font-semibold">CyberTap</h2>
-                      <p className="text-sm text-muted-foreground">Zarządzanie Pubem</p>
                     </div>
                 )}
                 <Button
@@ -269,6 +270,10 @@ function OrganizationLayout({ children }: { children: React.ReactNode }) {
                                           case 'promos':
                                             categoryName = 'Promocje'
                                             CategoryIcon = Tag
+                                            break
+                                            case 'games':
+                                            categoryName = 'Gry'
+                                            CategoryIcon = Dices
                                             break
                                         }
 

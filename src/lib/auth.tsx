@@ -3,7 +3,7 @@ import { AuthClient } from '@supabase/auth-js'
 
 const GOTRUE_URL = 'https://cybertap.razniewski.eu/auth'
 
-export const auth = new AuthClient({ 
+export const auth = new AuthClient({
   url: GOTRUE_URL,
   autoRefreshToken: true,
   persistSession: true
@@ -24,6 +24,12 @@ export interface ResetPasswordData {
   email: string
 }
 
+export interface OtpVerifyData {
+  email: string
+  token: string
+  newPassword: string
+}
+
 // Funkcja do tłumaczenia błędów na język polski
 const translateAuthError = (error: any): string => {
   if (!error) return 'Nieznany błąd'
@@ -35,34 +41,50 @@ const translateAuthError = (error: any): string => {
     case 'Invalid login credentials':
     case 'Invalid email or password':
       return 'Nieprawidłowy email lub hasło'
-    
+
     case 'Email not confirmed':
       return 'Email nie został potwierdzony. Sprawdź swoją skrzynkę pocztową.'
-    
+
     case 'User not found':
       return 'Użytkownik nie istnieje'
-    
+
     case 'Password should be at least 6 characters':
       return 'Hasło musi mieć co najmniej 6 znaków'
-    
+
     case 'User already registered':
       return 'Użytkownik o tym adresie email już istnieje'
-    
+
     case 'Email address is invalid':
       return 'Nieprawidłowy adres email'
-    
+
     case 'Signup is disabled':
       return 'Rejestracja jest obecnie wyłączona'
-    
+
     case 'Too many requests':
       return 'Za dużo prób. Spróbuj ponownie za chwilę.'
-    
+
     case 'Network error':
       return 'Błąd połączenia. Sprawdź połączenie internetowe.'
 
     case 'Failed to fetch':
       return 'Nie można połączyć się z serwerem autoryzacji. Sprawdź czy serwer działa.'
-    
+
+      // OTP specific errors
+    case 'Token has expired or is invalid':
+      return 'Kod wygasł lub jest nieprawidłowy. Wyślij nowy kod.'
+
+    case 'OTP has expired':
+      return 'Kod wygasł. Wyślij nowy kod.'
+
+    case 'Invalid OTP':
+      return 'Nieprawidłowy kod. Sprawdź i spróbuj ponownie.'
+
+    case 'Email rate limit exceeded':
+      return 'Za dużo prób wysłania kodu. Poczekaj chwilę.'
+
+    case 'For security purposes, you can only request this once every 60 seconds':
+      return 'Ze względów bezpieczeństwa możesz wysłać kod raz na 60 sekund.'
+
     default:
       // Jeśli błąd zawiera znane fragmenty
       if (message.includes('password')) {
@@ -74,7 +96,10 @@ const translateAuthError = (error: any): string => {
       if (message.includes('network') || message.includes('fetch')) {
         return 'Błąd połączenia z serwerem'
       }
-      
+      if (message.includes('otp') || message.includes('token') || message.includes('code')) {
+        return 'Problem z kodem weryfikacyjnym. Spróbuj ponownie.'
+      }
+
       // W ostateczności zwróć oryginalny błąd
       return message || 'Wystąpił nieoczekiwany błąd'
   }
@@ -89,25 +114,25 @@ export const authHelpers = {
         email,
         password,
       })
-      
+
       if (error) {
-        return { 
-          data, 
-          error: { 
-            ...error, 
-            message: translateAuthError(error) 
-          } 
+        return {
+          data,
+          error: {
+            ...error,
+            message: translateAuthError(error)
+          }
         }
       }
-      
+
       return { data, error: null }
     } catch (err) {
       console.error('SignUp error:', err)
-      return { 
-        data: null, 
-        error: { 
-          message: translateAuthError(err) 
-        } 
+      return {
+        data: null,
+        error: {
+          message: translateAuthError(err)
+        }
       }
     }
   },
@@ -119,25 +144,25 @@ export const authHelpers = {
         email,
         password,
       })
-      
+
       if (error) {
-        return { 
-          data, 
-          error: { 
-            ...error, 
-            message: translateAuthError(error) 
-          } 
+        return {
+          data,
+          error: {
+            ...error,
+            message: translateAuthError(error)
+          }
         }
       }
-      
+
       return { data, error: null }
     } catch (err) {
       console.error('SignIn error:', err)
-      return { 
-        data: null, 
-        error: { 
-          message: translateAuthError(err) 
-        } 
+      return {
+        data: null,
+        error: {
+          message: translateAuthError(err)
+        }
       }
     }
   },
@@ -174,50 +199,138 @@ export const authHelpers = {
   async signOut() {
     try {
       const { error } = await auth.signOut({ scope: 'local' })
-      
+
       if (error) {
-        return { 
-          error: { 
-            ...error, 
-            message: translateAuthError(error) 
-          } 
+        return {
+          error: {
+            ...error,
+            message: translateAuthError(error)
+          }
         }
       }
-      
+
       return { error: null }
     } catch (err) {
       console.error('SignOut error:', err)
-      return { 
-        error: { 
-          message: translateAuthError(err) 
-        } 
+      return {
+        error: {
+          message: translateAuthError(err)
+        }
       }
     }
   },
 
-  // Reset hasła
+  // Wyślij OTP na email (do resetu hasła)
+  async sendPasswordResetOtp({ email }: ResetPasswordData) {
+    try {
+      const { data, error } = await auth.signInWithOtp({
+        email,
+        options: {
+          shouldCreateUser: false, // nie twórz nowego użytkownika jeśli nie istnieje
+        }
+      })
+
+      if (error) {
+        return {
+          data,
+          error: {
+            ...error,
+            message: translateAuthError(error)
+          }
+        }
+      }
+
+      return { data, error: null }
+    } catch (err) {
+      console.error('Send OTP error:', err)
+      return {
+        data: null,
+        error: {
+          message: translateAuthError(err)
+        }
+      }
+    }
+  },
+
+  // Weryfikuj OTP i zmień hasło
+  async verifyOtpAndChangePassword({ email, token, newPassword }: OtpVerifyData) {
+    try {
+      // Najpierw weryfikuj OTP (to zaloguje użytkownika)
+      const { data, error } = await auth.verifyOtp({
+        email,
+        token,
+        type: 'email'
+      })
+
+      if (error) {
+        return {
+          data: null,
+          error: {
+            ...error,
+            message: translateAuthError(error)
+          }
+        }
+      }
+
+      // Teraz zmień hasło (użytkownik jest zalogowany po verifyOtp)
+      const { data: updateData, error: updateError } = await auth.updateUser({
+        password: newPassword
+      })
+
+      if (updateError) {
+        // Wyloguj jeśli zmiana hasła się nie powiodła
+        await auth.signOut({ scope: 'local' })
+        return {
+          data: null,
+          error: {
+            ...updateError,
+            message: translateAuthError(updateError)
+          }
+        }
+      }
+
+      // Wyloguj po udanej zmianie hasła (użytkownik musi się zalogować nowym hasłem)
+      await auth.signOut({ scope: 'local' })
+
+      return { data: updateData, error: null }
+    } catch (err) {
+      console.error('Verify OTP and change password error:', err)
+      // Upewnij się że wylogowujemy w przypadku błędu
+      try {
+        await auth.signOut({ scope: 'local' })
+      } catch {}
+      return {
+        data: null,
+        error: {
+          message: translateAuthError(err)
+        }
+      }
+    }
+  },
+
+  // Stary reset hasła przez link (zostawiam jako fallback)
   async resetPassword({ email }: ResetPasswordData) {
     try {
       const { data, error } = await auth.resetPasswordForEmail(email)
-      
+
       if (error) {
-        return { 
-          data, 
-          error: { 
-            ...error, 
-            message: translateAuthError(error) 
-          } 
+        return {
+          data,
+          error: {
+            ...error,
+            message: translateAuthError(error)
+          }
         }
       }
-      
+
       return { data, error: null }
     } catch (err) {
       console.error('Reset password error:', err)
-      return { 
-        data: null, 
-        error: { 
-          message: translateAuthError(err) 
-        } 
+      return {
+        data: null,
+        error: {
+          message: translateAuthError(err)
+        }
       }
     }
   },
@@ -226,25 +339,25 @@ export const authHelpers = {
   async getCurrentUser() {
     try {
       const { data: { user }, error } = await auth.getUser()
-      
+
       if (error) {
-        return { 
-          user: null, 
-          error: { 
-            ...error, 
-            message: translateAuthError(error) 
-          } 
+        return {
+          user: null,
+          error: {
+            ...error,
+            message: translateAuthError(error)
+          }
         }
       }
-      
+
       return { user, error: null }
     } catch (err) {
       console.error('Get current user error:', err)
-      return { 
-        user: null, 
-        error: { 
-          message: translateAuthError(err) 
-        } 
+      return {
+        user: null,
+        error: {
+          message: translateAuthError(err)
+        }
       }
     }
   },
@@ -253,25 +366,25 @@ export const authHelpers = {
   async getSession() {
     try {
       const { data: { session }, error } = await auth.getSession()
-      
+
       if (error) {
-        return { 
-          session: null, 
-          error: { 
-            ...error, 
-            message: translateAuthError(error) 
-          } 
+        return {
+          session: null,
+          error: {
+            ...error,
+            message: translateAuthError(error)
+          }
         }
       }
-      
+
       return { session, error: null }
     } catch (err) {
       console.error('Get session error:', err)
-      return { 
-        session: null, 
-        error: { 
-          message: translateAuthError(err) 
-        } 
+      return {
+        session: null,
+        error: {
+          message: translateAuthError(err)
+        }
       }
     }
   },

@@ -357,9 +357,18 @@ export default function PubWarehousePage() {
                           </td>
                           <td className="p-2">
                             {item.taken_off_at ? (
-                              <Badge variant="secondary">Zdjęte</Badge>
+                                <div>
+                                  <Badge variant="secondary">Zdjęte</Badge>
+                                  {item.taken_off_note && (
+                                      <p className="text-xs text-muted-foreground mt-1">{item.taken_off_note}</p>
+                                  )}
+                                </div>
+                            ) : item.tap_slot_position ? (
+                                <Badge variant="default" className="bg-green-600">
+                                  Kran #{item.tap_slot_position}
+                                </Badge>
                             ) : (
-                              <Badge variant="default">Aktywne</Badge>
+                                <Badge variant="outline">Wolne</Badge>
                             )}
                           </td>
                           <td className="p-2 text-sm text-muted-foreground">

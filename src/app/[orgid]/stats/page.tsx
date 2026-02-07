@@ -38,6 +38,7 @@ import {
     Building2
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { DateTimeInput } from '@/components/ui/datetime-input'
 
 type StatsTab = 'topups' | 'products' | 'sales' | 'visits'
 
@@ -45,11 +46,11 @@ type StatsTab = 'topups' | 'products' | 'sales' | 'visits'
 const getCurrentMonthRange = () => {
     const now = new Date()
     const firstDay = new Date(now.getFullYear(), now.getMonth(), 1)
-    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59)
 
     return {
-        startDate: firstDay.toISOString().split('T')[0],
-        endDate: lastDay.toISOString().split('T')[0]
+        startDate: firstDay.toISOString(),
+        endDate: lastDay.toISOString()
     }
 }
 
@@ -601,20 +602,16 @@ export default function OrganizationStatsPage() {
                                     <div className="grid grid-cols-2 gap-4 py-4 border-b">
                                         <div>
                                             <label className="text-sm font-medium">Od</label>
-                                            <input
-                                                type="date"
+                                            <DateTimeInput
                                                 value={dateRange.startDate}
-                                                onChange={(e) => setDateRange(prev => ({ ...prev, startDate: e.target.value }))}
-                                                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+                                                onChange={(iso) => setDateRange(prev => ({ ...prev, startDate: iso }))}
                                             />
                                         </div>
                                         <div>
                                             <label className="text-sm font-medium">Do</label>
-                                            <input
-                                                type="date"
+                                            <DateTimeInput
                                                 value={dateRange.endDate}
-                                                onChange={(e) => setDateRange(prev => ({ ...prev, endDate: e.target.value }))}
-                                                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+                                                onChange={(iso) => setDateRange(prev => ({ ...prev, endDate: iso }))}
                                             />
                                         </div>
                                     </div>

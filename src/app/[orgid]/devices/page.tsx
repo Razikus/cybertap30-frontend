@@ -333,9 +333,6 @@ export default function OrganizationDevicesPage() {
                           >
                             Przypisz do pubu
                           </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            Konfiguruj
-                          </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </td>

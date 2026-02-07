@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Switch } from '@/components/ui/switch'
 import { useRef } from 'react'
+import { DateTimeInput } from '@/components/ui/datetime-input'
 import {
     Dialog,
     DialogContent,
@@ -100,7 +101,7 @@ const defaultFormData: PromoFormData = {
     discount_percent: 10,
     product_type: '',
     product_id: null,
-    valid_from: new Date().toISOString().slice(0, 16),
+    valid_from: new Date().toISOString(),
     valid_to: '',
     recurrent: false,
     recurrent_days: [],
@@ -447,8 +448,8 @@ export default function PubPromosPage() {
             discount_percent: promo.discount_percent,
             product_type: promo.product_type || '',
             product_id: promo.product_id || null,
-            valid_from: promo.valid_from ? promo.valid_from.slice(0, 16) : '',
-            valid_to: promo.valid_to ? promo.valid_to.slice(0, 16) : '',
+            valid_from: promo.valid_from ? promo.valid_from : '',
+            valid_to: promo.valid_to ? promo.valid_to : '',
             recurrent: promo.recurrent,
             recurrent_days: promo.recurrent_days || [],
             recurrent_time_from: promo.recurrent_time_from || '16:00',
@@ -516,6 +517,10 @@ export default function PubPromosPage() {
     }
 
     const handleUpdate = async () => {
+        console.log('=== DEBUG ===')
+        console.log('formData.valid_from:', formData.valid_from)
+        console.log('formData.valid_to:', formData.valid_to)
+        console.log('typeof valid_to:', typeof formData.valid_to)
         if (!session || !selectedPromo) return
 
         if (!formData.name.trim()) {
@@ -713,18 +718,16 @@ export default function PubPromosPage() {
             <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                     <Label>Ważna od</Label>
-                    <Input
-                        type="datetime-local"
+                    <DateTimeInput
                         value={formData.valid_from}
-                        onChange={(e) => setFormData({ ...formData, valid_from: e.target.value })}
+                        onChange={(iso) => setFormData({ ...formData, valid_from: iso })}
                     />
                 </div>
                 <div className="space-y-2">
                     <Label>Ważna do (opcjonalnie)</Label>
-                    <Input
-                        type="datetime-local"
+                    <DateTimeInput
                         value={formData.valid_to}
-                        onChange={(e) => setFormData({ ...formData, valid_to: e.target.value })}
+                        onChange={(iso) => setFormData({ ...formData, valid_to: iso })}
                     />
                 </div>
             </div>

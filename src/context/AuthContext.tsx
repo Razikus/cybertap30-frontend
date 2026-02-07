@@ -16,6 +16,8 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<any>
   signOut: () => Promise<any>
   resetPassword: (email: string) => Promise<any>
+  sendPasswordResetOtp: (email: string) => Promise<any>
+  verifyOtpAndChangePassword: (data: { email: string; token: string; newPassword: string }) => Promise<any>
   refreshUserInfo: () => Promise<void>
   updatePassword: (newPassword: string) => Promise<any>
 }
@@ -51,7 +53,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     try {
       const info = await apiClient.getMe(currentSession)
       setUserInfo(info)
-      
+
       // Only redirect if:
       // 1. shouldRedirect is true (initial login)
       // 2. User is not already on an organization page
@@ -82,13 +84,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
       const { session } = await authHelpers.getSession()
       setSession(session)
       setUser(session?.user ?? null)
-      
+
       if (session?.user) {
         // Check if user is already on organization page
         const isOnOrgPage = pathname.match(/^\/\d+/)
         await fetchUserInfo(session, !isOnOrgPage) // Only redirect if not on org page
       }
-      
+
       setLoading(false)
     }
 
@@ -96,21 +98,21 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     // Listen for auth state changes
     const { data: { subscription } } = authHelpers.onAuthStateChange(
-      async (event, session) => {
-        setSession(session)
-        setUser(session?.user ?? null)
-        
-        if (session?.user) {
-          // On auth state change, only redirect if it's a new login
-          const shouldRedirect = event === 'SIGNED_IN' && !hasInitialRedirect
-          await fetchUserInfo(session, shouldRedirect)
-        } else {
-          setUserInfo(null)
-          setHasInitialRedirect(false) // Reset redirect flag on logout
+        async (event, session) => {
+          setSession(session)
+          setUser(session?.user ?? null)
+
+          if (session?.user) {
+            // On auth state change, only redirect if it's a new login
+            const shouldRedirect = event === 'SIGNED_IN' && !hasInitialRedirect
+            await fetchUserInfo(session, shouldRedirect)
+          } else {
+            setUserInfo(null)
+            setHasInitialRedirect(false) // Reset redirect flag on logout
+          }
+
+          setLoading(false)
         }
-        
-        setLoading(false)
-      }
     )
 
     return () => subscription.unsubscribe()
@@ -126,10 +128,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const signIn = async (email: string, password: string) => {
     setLoading(true)
     const result = await authHelpers.signIn({ email, password })
-    
+
     // Reset redirect flag so new login can redirect
     setHasInitialRedirect(false)
-    
+
     setLoading(false)
     return result
   }
@@ -147,6 +149,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
     return await authHelpers.resetPassword({ email })
   }
 
+  const sendPasswordResetOtp = async (email: string) => {
+    return await authHelpers.sendPasswordResetOtp({ email })
+  }
+
+  const verifyOtpAndChangePassword = async (data: { email: string; token: string; newPassword: string }) => {
+    return await authHelpers.verifyOtpAndChangePassword(data)
+  }
+
   const value = {
     user,
     session,
@@ -156,6 +166,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
     signIn,
     signOut,
     resetPassword,
+    sendPasswordResetOtp,
+    verifyOtpAndChangePassword,
     refreshUserInfo,
     updatePassword,
   }
