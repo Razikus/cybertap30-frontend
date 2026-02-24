@@ -138,11 +138,19 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const signOut = async () => {
     setLoading(true)
-    const result = await authHelpers.signOut()
-    setUserInfo(null)
-    setHasInitialRedirect(false) // Reset redirect flag on sign out
-    setLoading(false)
-    return result
+    try {
+      await authHelpers.signOut()
+    } catch (error) {
+      console.error('Sign out API failed:', error)
+    } finally {
+      // Zawsze czyść stan lokalnie, nawet przy 403
+      setUser(null)
+      setSession(null)
+      setUserInfo(null)
+      setHasInitialRedirect(false)
+      setLoading(false)
+      router.push('/') // lub '/login'
+    }
   }
 
   const resetPassword = async (email: string) => {

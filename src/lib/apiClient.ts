@@ -15,6 +15,63 @@ export interface UserInfo {
   updated_at: string
 }
 
+export interface AccountHistoryResponse {
+  account: {
+    id: number
+    uuid: string
+    organization_id: number | null
+    pub_id: number | null
+    cash: number
+    blocked: boolean
+    created_at: string
+    updated_at: string | null
+  }
+  summary: {
+    total_topups: number
+    total_bonuses: number
+    total_spent: number
+    total_volume_ml: number
+    expected_balance: number
+    actual_balance: number
+    balance_discrepancy: number
+    finished_transactions: number
+    unfinished_transactions: number
+    total_transactions: number
+    total_topup_count: number
+    total_bonus_count: number
+    old_system_cash: number
+    migrated_account: boolean
+  }
+  transactions: {
+    id: number
+    created_at: string
+    finished_at: string | null
+    product_name: string
+    product_price_at_moment: number
+    charged_volume_ml: number | null
+    cost: number | null
+    pub_name: string | null
+    tap_slot_position: number | null
+    shift_id: number | null
+    warehouse_item_id: number
+    warehouse_item_volume: number | null
+  }[]
+  topups: {
+    id: number
+    amount: number
+    created_at: string
+    pub_name: string | null
+    shift_id: number | null
+  }[]
+  bonus_topups: {
+    id: number
+    amount: number
+    source: string
+    was_informed: boolean
+    created_at: string
+  }[]
+}
+
 
 // Base product interface with common fields (snake_case matching Go backend)
 export interface BaseProduct {
@@ -33,6 +90,27 @@ export interface BaseProduct {
   main_image_resource_uuid?: string
   glass_image_resource_uuid?: string
 }
+
+export interface MergeWarehouseSource {
+  warehouse_item_id: number
+  volume: number // ml to take from this source
+}
+
+export interface MergeWarehouseRequest {
+  target_warehouse_item_id: number
+  sources: MergeWarehouseSource[]
+  new_charged_volume: number
+  new_volume?: number // optional: override the calculated total volume
+}
+
+export interface MergeWarehouseResponse {
+  message: string
+  new_volume: number
+  new_charged_volume: number
+  sources_merged: number
+  merged_source_ids: number[]
+}
+
 
 export interface BeerProduct extends BaseProduct {
   bitterness: number
@@ -438,6 +516,36 @@ export interface PaginatedTopupDetailsResponse {
 }
 
 
+export interface LuckyTapConfig {
+  id: number
+  organization_id: number
+  pub_id: number
+  enabled: boolean
+  mode: string
+  scheduled_times: string[]
+  max_rounds_per_shift: number | null
+  min_interval_min: number | null
+  round_duration_min: number
+  discount_percent: number
+  reward_amount: number
+  created_at: string
+  updated_at: string
+}
+
+export interface UpsertLuckyTapRequest {
+  pub_id: number
+  enabled: boolean
+  mode: string
+  scheduled_times: string[]
+  max_rounds_per_shift?: number | null
+  min_interval_min?: number | null
+  round_duration_min: number
+  discount_percent: number
+  reward_amount: number
+}
+
+
+
 export interface TapSlotWithProduct extends TapSlot {
   product_name: string | null
   product_id: number | null
@@ -497,6 +605,7 @@ export interface WarehouseListParams {
   limit?: number
   search?: string
   activeOnly?: boolean
+  productType?: string
 }
 
 export interface TakeOffWarehouseItemRequest {
@@ -715,6 +824,22 @@ class ApiClient {
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}))
       throw new Error(errorData.error || `Failed to update promo: ${response.statusText}`)
+    }
+
+    return response.json()
+  }
+
+
+  async testGameEvent(session: any, pubId: number, game: string): Promise<{ message: string; pub_id: number; game: string; topic: string }> {
+    const response = await fetch(`${API_BASE_URL}/user/game/test`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(session),
+      body: JSON.stringify({ pub_id: pubId, game }),
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}))
+      throw new Error(errorData.error || `Failed to send test game event: ${response.statusText}`)
     }
 
     return response.json()
@@ -1159,6 +1284,9 @@ class ApiClient {
     if (params.activeOnly !== undefined) {
       searchParams.append('active_only', params.activeOnly.toString())
     }
+    if (params.productType) {
+      searchParams.set('product_type', params.productType)
+    }
 
     const response = await fetch(`${API_BASE_URL}/user/warehouse/list?${searchParams}`, {
       method: 'POST',
@@ -1494,6 +1622,98 @@ class ApiClient {
 
     return response.json()
   }
+
+
+  async getLuckyTapConfig(session: any, pubId: number): Promise<LuckyTapConfig | null> {
+    const response = await fetch(`${API_BASE_URL}/user/game/luckytap/get`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(session),
+      body: JSON.stringify({ pub_id: pubId }),
+    })
+
+    if (!response.ok) {
+      throw new Error(`Failed to get lucky tap config: ${response.statusText}`)
+    }
+
+    const data = await response.json()
+    return data || null
+  }
+
+  async upsertLuckyTapConfig(session: any, data: UpsertLuckyTapRequest): Promise<LuckyTapConfig> {
+    const response = await fetch(`${API_BASE_URL}/user/game/luckytap/upsert`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(session),
+      body: JSON.stringify(data),
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}))
+      throw new Error(errorData.error || `Failed to upsert lucky tap config: ${response.statusText}`)
+    }
+
+    return response.json()
+  }
+
+  async toggleLuckyTap(session: any, pubId: number, enabled: boolean): Promise<{ message: string }> {
+    const response = await fetch(`${API_BASE_URL}/user/game/luckytap/toggle`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(session),
+      body: JSON.stringify({ pub_id: pubId, enabled }),
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}))
+      throw new Error(errorData.error || `Failed to toggle lucky tap: ${response.statusText}`)
+    }
+
+    return response.json()
+  }
+
+  async getAccountHistory(session: any, secret: string): Promise<AccountHistoryResponse> {
+    const response = await fetch(`${API_BASE_URL}/user/account/history`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(session),
+      body: JSON.stringify({ secret }),
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}))
+      throw new Error(errorData.error || `Failed to get account history: ${response.statusText}`)
+    }
+
+    return response.json()
+  }
+
+  async deleteLuckyTapConfig(session: any, pubId: number): Promise<{ message: string }> {
+    const response = await fetch(`${API_BASE_URL}/user/game/luckytap/delete`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(session),
+      body: JSON.stringify({ pub_id: pubId }),
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}))
+      throw new Error(errorData.error || `Failed to delete lucky tap config: ${response.statusText}`)
+    }
+
+    return response.json()
+  }
+
+  async mergeWarehouseItems(session: any, data: MergeWarehouseRequest): Promise<MergeWarehouseResponse> {
+    const response = await fetch(`${API_BASE_URL}/user/warehouse/merge`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(session),
+      body: JSON.stringify(data),
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}))
+      throw new Error(errorData.error || `Failed to merge warehouse items: ${response.statusText}`)
+    }
+
+    return response.json()
+  }
+
 }
 
 export const apiClient = new ApiClient()

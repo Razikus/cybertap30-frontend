@@ -303,7 +303,6 @@ export default function OrganizationDevicesPage() {
                 <tr className="border-b">
                   <th className="text-left p-2">UUID</th>
                   <th className="text-left p-2">Pub</th>
-                  <th className="text-left p-2">Status</th>
                   <th className="text-left p-2">Utworzono</th>
                   <th className="text-left p-2">Akcje</th>
                 </tr>
@@ -313,7 +312,6 @@ export default function OrganizationDevicesPage() {
                   <tr key={cashdesk.id} className="border-b hover:bg-muted/50">
                     <td className="p-2 font-mono ">{cashdesk.uuid.slice(0, 16)}</td>
                     <td className="p-2">{getPubName(cashdesk.pub_id)}</td>
-                    <td className="p-2">{getDeviceStatus(cashdesk)}</td>
                     <td className="p-2 text-sm text-muted-foreground">
                       {formatDate(cashdesk.created_at)}
                     </td>
@@ -340,7 +338,7 @@ export default function OrganizationDevicesPage() {
                 ))}
                 {(!devices?.cashdesks || devices.cashdesks.length === 0) && (
                   <tr>
-                    <td colSpan={5} className="p-8 text-center text-muted-foreground">
+                    <td colSpan={4} className="p-8 text-center text-muted-foreground">
                       Brak kas w organizacji
                     </td>
                   </tr>

@@ -968,6 +968,7 @@ export default function OrganizationProductsPage() {
                                         })
                                         setWarehouseDialogOpen(true)
                                       }}
+                                      disabled={!product.active}
                                   >
                                     <Package className="h-4 w-4 mr-2" />
                                     Przyjmij na magazyn

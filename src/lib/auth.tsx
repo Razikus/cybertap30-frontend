@@ -198,6 +198,9 @@ export const authHelpers = {
   // Wylogowanie
   async signOut() {
     try {
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('supabase.auth.token')
+      }
       const { error } = await auth.signOut({ scope: 'local' })
 
       if (error) {
