@@ -21,7 +21,9 @@ import {
   Tag,
   Dices,
   CreditCard,
-  FlaskConical
+  FlaskConical,
+  Smartphone,
+  BadgeCheck
 } from "lucide-react"
 
 function OrganizationLayout({ children }: { children: React.ReactNode }) {
@@ -117,9 +119,11 @@ function OrganizationLayout({ children }: { children: React.ReactNode }) {
     { id: 'org-files', name: 'Pliki', icon: FileText },
     { id: 'org-products', name: 'Produkty', icon: Package2 },
     { id: 'org-acclookup', name: 'Historia konta', icon: CreditCard },
+    { id: 'org-mobile-stats', name: 'Aplikacja', icon: Smartphone },
     ...(hasManagerAccess ? [
       { id: 'org-statistics', name: 'Statystyki', icon: BarChart3 },
-      { id: 'org-users', name: 'Użytkownicy', icon: Users }
+      { id: 'org-users', name: 'Użytkownicy', icon: Users },
+      { id: 'org-special-status', name: 'Statusy specjalne', icon: BadgeCheck },
     ] : []),
     ...(hasAdminAccess ? [{ id: 'org-game-test', name: 'Testowo', icon: FlaskConical }] : []),
   ]
@@ -151,6 +155,8 @@ function OrganizationLayout({ children }: { children: React.ReactNode }) {
         'warehouse': 'warehouse',
         'users': 'users',
         'acclookup': 'acclookup',
+        'mobile-stats': 'mobile-stats',
+        'special-status': 'special-status',
       }
       const route = routeMap[category] || category
       return pathname === `/${orgId}/${route}`
@@ -178,6 +184,8 @@ function OrganizationLayout({ children }: { children: React.ReactNode }) {
       'games': 'Gry',
       'acclookup': 'Historia konta',
       'game-test': 'Testowo',
+      'mobile-stats': 'Aplikacja',
+      'special-status': 'Statusy specjalne',
     }
 
     return titleMap[lastPart] || 'Dashboard'

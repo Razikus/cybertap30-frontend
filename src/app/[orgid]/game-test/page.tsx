@@ -20,6 +20,8 @@ import { toast } from 'sonner'
 const AVAILABLE_GAMES = [
     { id: 'lucky_pour', label: 'Lucky Pour', description: 'Dźwięk + przekaźnik przy wygranej Lucky Pour' },
     { id: 'lucky_tap', label: 'Szczęśliwy Kran', description: 'Dźwięk + przekaźnik przy wygranej Lucky Tap' },
+    { id: 'lucky_tap_start', label: 'Lucky Tap START', description: 'Rozpocznij testową rundę Lucky Tap (5 min, 20%, 500 nagrody)' },
+    { id: 'lucky_tap_stop', label: 'Lucky Tap STOP', description: 'Zakończ rundę Lucky Tap na wszystkich kranach' },
 ]
 
 export default function GameTestPage() {

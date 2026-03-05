@@ -278,6 +278,36 @@ export interface PaginationMeta {
   has_prev: boolean
 }
 
+export interface StatusDef {
+  id: number
+  organization_id: number
+  name: string
+  discount: number
+  is_excluding_from_other_promos: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface MobileUserSearchResult {
+  user_id: string
+  email: string
+  account_id: number
+}
+
+export interface SpecialStatusEntry {
+  id: number
+  account_id: number
+  account_uuid: string
+  cash: number
+  status_def_id: number
+  status_name: string
+  discount: number
+  is_excluding_from_other_promos: boolean
+  email: string | null
+  created_at: string
+  updated_at: string
+}
+
 export interface PaginatedResourcesResponse {
   data: Resource[]
   pagination: PaginationMeta
@@ -288,6 +318,26 @@ export interface ResourceListParams {
   page?: number
   limit?: number
   search?: string
+}
+
+// ==================== MOBILE STATS TYPES ====================
+
+export interface MonthlyCount {
+  month: string
+  count: number
+}
+
+export interface MonthlyPubCount {
+  month: string
+  pub_id: number
+  pub_name: string
+  links_count: number
+}
+
+export interface MobileStatsResponse {
+  registered_users: MonthlyCount[]
+  linked_cards: MonthlyPubCount[]
+  marketing_consents: MonthlyCount[]
 }
 
 export interface CreateBeerRequest {
@@ -1451,6 +1501,20 @@ class ApiClient {
     }
   }
 
+  async getMobileStats(session: any, organizationId: number): Promise<MobileStatsResponse> {
+    const response = await fetch(`${API_BASE_URL}/user/mobile/stats?organization_id=${organizationId}`, {
+      method: 'GET',
+      headers: this.getAuthHeaders(session),
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}))
+      throw new Error(errorData.error || `Failed to get mobile stats: ${response.statusText}`)
+    }
+
+    return response.json()
+  }
+
   // Product creation endpoints
   async createBeer(session: any, data: CreateBeerRequest): Promise<{message: string, beer_id: number}> {
     const response = await fetch(`${API_BASE_URL}/user/beer/create`, {
@@ -1709,6 +1773,81 @@ class ApiClient {
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}))
       throw new Error(errorData.error || `Failed to merge warehouse items: ${response.statusText}`)
+    }
+
+    return response.json()
+  }
+
+  async listStatusDefs(session: any, organizationId: number): Promise<StatusDef[]> {
+    const response = await fetch(`${API_BASE_URL}/user/status-def/list`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(session),
+      body: JSON.stringify({ organization_id: organizationId }),
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}))
+      throw new Error(errorData.error || `Failed to list status definitions: ${response.statusText}`)
+    }
+
+    return response.json()
+  }
+
+  async searchMobileUsers(session: any, organizationId: number, email: string): Promise<MobileUserSearchResult[]> {
+    const response = await fetch(`${API_BASE_URL}/user/mobile-users/search`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(session),
+      body: JSON.stringify({ organization_id: organizationId, email }),
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}))
+      throw new Error(errorData.error || `Failed to search mobile users: ${response.statusText}`)
+    }
+
+    return response.json()
+  }
+
+  async assignSpecialStatus(session: any, accountId: number, organizationId: number, statusDefId: number): Promise<{ message: string }> {
+    const response = await fetch(`${API_BASE_URL}/user/special-status/assign`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(session),
+      body: JSON.stringify({ account_id: accountId, organization_id: organizationId, status_def_id: statusDefId }),
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}))
+      throw new Error(errorData.error || `Failed to assign special status: ${response.statusText}`)
+    }
+
+    return response.json()
+  }
+
+  async removeSpecialStatus(session: any, accountId: number, organizationId: number): Promise<{ message: string }> {
+    const response = await fetch(`${API_BASE_URL}/user/special-status/remove`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(session),
+      body: JSON.stringify({ account_id: accountId, organization_id: organizationId }),
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}))
+      throw new Error(errorData.error || `Failed to remove special status: ${response.statusText}`)
+    }
+
+    return response.json()
+  }
+
+  async listSpecialStatusUsers(session: any, organizationId: number): Promise<SpecialStatusEntry[]> {
+    const response = await fetch(`${API_BASE_URL}/user/special-status/list`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(session),
+      body: JSON.stringify({ organization_id: organizationId }),
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}))
+      throw new Error(errorData.error || `Failed to list special status users: ${response.statusText}`)
     }
 
     return response.json()
