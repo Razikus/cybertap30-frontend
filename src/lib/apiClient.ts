@@ -3,6 +3,64 @@ import { useAuth } from '@/context/AuthContext'
 
 const API_BASE_URL = 'https://cybertap.razniewski.eu'
 
+export interface Campaign {
+  id: number
+  organization_id: number
+  pub_id: number | null
+  campaign_type: 'LINKED' | 'UNLINKED'
+  title: string
+  body: string
+  bonus_amount: number | null
+  status: 'draft' | 'active' | 'completed' | 'cancelled'
+  total_recipients: number
+  sent_count: number
+  failed_count: number
+  launched_at: string | null
+  completed_at: string | null
+  created_by: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface CreateCampaignRequest {
+  organization_id: number
+  pub_id?: number | null
+  campaign_type: 'LINKED' | 'UNLINKED'
+  title: string
+  body: string
+  bonus_amount?: number | null
+}
+
+export interface LaunchCampaignResponse {
+  campaign_id: number
+  status: string
+  total_recipients: number
+}
+
+export interface TestCampaignResult {
+  notification_id: number
+  platform: string
+  success: boolean
+  error?: string
+}
+
+export interface TestCampaignResponse {
+  campaign_id: number
+  test: boolean
+  results: TestCampaignResult[]
+}
+
+export interface DeliveryBreakdown {
+  status: string
+  count: number
+}
+
+export interface PlatformBreakdown {
+  platform: string
+  count: number
+}
+
+
 export interface UserInfo {
   id: number
   user_id: string
@@ -291,19 +349,21 @@ export interface StatusDef {
 export interface MobileUserSearchResult {
   user_id: string
   email: string
-  account_id: number
+  account_id: number | null
+  has_linked_card: boolean
 }
 
 export interface SpecialStatusEntry {
   id: number
-  account_id: number
-  account_uuid: string
-  cash: number
+  mobile_user_id: string
+  email: string
   status_def_id: number
   status_name: string
   discount: number
   is_excluding_from_other_promos: boolean
-  email: string | null
+  account_id: number | null
+  cash: number
+  has_linked_card: boolean
   created_at: string
   updated_at: string
 }
@@ -455,6 +515,35 @@ export interface Promo {
   created_at: string
   updated_at: string
   created_by: string | null
+}
+
+
+export interface TopupEntry {
+  id: number
+  amount: number
+  created_at: string
+  shift_id: number | null
+  account_id: number
+  account_uuid: string
+  card_prefix: string
+}
+
+export interface TopupListSummary {
+  total_amount: number
+  total_count: number
+}
+
+export interface TopupListResponse {
+  data: TopupEntry[]
+  summary: TopupListSummary
+  pagination: {
+    page: number
+    limit: number
+    total: number
+    total_pages: number
+    has_next: boolean
+    has_prev: boolean
+  }
 }
 
 export interface CreatePromoRequest {
@@ -849,6 +938,8 @@ class ApiClient {
     return response.json()
   }
 
+
+
   async createPromo(session: any, data: CreatePromoRequest): Promise<Promo> {
     const response = await fetch(`${API_BASE_URL}/user/promo/create`, {
       method: 'POST',
@@ -1081,6 +1172,35 @@ class ApiClient {
 
     if (!response.ok) {
       throw new Error(`Failed to list shifts: ${response.statusText}`)
+    }
+
+    return response.json()
+  }
+
+  async listTopups(
+      session: any,
+      params: {
+        organizationId: number
+        pubId: number
+        shiftIds?: number[]
+        page?: number
+        limit?: number
+      }
+  ): Promise<TopupListResponse> {
+    const response = await fetch(`${API_BASE_URL}/user/pub/topups/list`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(session),
+      body: JSON.stringify({
+        organization_id: params.organizationId,
+        pub_id: params.pubId,
+        shift_ids: params.shiftIds || [],
+        page: params.page || 1,
+        limit: params.limit || 50,
+      }),
+    })
+
+    if (!response.ok) {
+      throw new Error(`Failed to list topups: ${response.statusText}`)
     }
 
     return response.json()
@@ -1733,11 +1853,14 @@ class ApiClient {
     return response.json()
   }
 
-  async getAccountHistory(session: any, secret: string): Promise<AccountHistoryResponse> {
+  async getAccountHistory(session: any, secret?: string, accountId?: number): Promise<AccountHistoryResponse> {
     const response = await fetch(`${API_BASE_URL}/user/account/history`, {
       method: 'POST',
       headers: this.getAuthHeaders(session),
-      body: JSON.stringify({ secret }),
+      body: JSON.stringify({
+        ...(secret ? { secret } : {}),
+        ...(accountId ? { account_id: accountId } : {}),
+      }),
     })
 
     if (!response.ok) {
@@ -1808,11 +1931,11 @@ class ApiClient {
     return response.json()
   }
 
-  async assignSpecialStatus(session: any, accountId: number, organizationId: number, statusDefId: number): Promise<{ message: string }> {
+  async assignSpecialStatus(session: any, mobileUserId: string, organizationId: number, statusDefId: number): Promise<{ message: string }> {
     const response = await fetch(`${API_BASE_URL}/user/special-status/assign`, {
       method: 'POST',
       headers: this.getAuthHeaders(session),
-      body: JSON.stringify({ account_id: accountId, organization_id: organizationId, status_def_id: statusDefId }),
+      body: JSON.stringify({ mobile_user_id: mobileUserId, organization_id: organizationId, status_def_id: statusDefId }),
     })
 
     if (!response.ok) {
@@ -1823,11 +1946,11 @@ class ApiClient {
     return response.json()
   }
 
-  async removeSpecialStatus(session: any, accountId: number, organizationId: number): Promise<{ message: string }> {
+  async removeSpecialStatus(session: any, mobileUserId: string, organizationId: number): Promise<{ message: string }> {
     const response = await fetch(`${API_BASE_URL}/user/special-status/remove`, {
       method: 'POST',
       headers: this.getAuthHeaders(session),
-      body: JSON.stringify({ account_id: accountId, organization_id: organizationId }),
+      body: JSON.stringify({ mobile_user_id: mobileUserId, organization_id: organizationId }),
     })
 
     if (!response.ok) {

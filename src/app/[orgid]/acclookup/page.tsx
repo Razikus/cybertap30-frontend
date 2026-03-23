@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import {useEffect, useState} from 'react'
 import { useParams } from 'next/navigation'
 import { useAuth } from "@/context/AuthContext"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -8,6 +8,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { apiClient, type AccountHistoryResponse } from '@/lib/apiClient'
+
+import { useSearchParams } from 'next/navigation'
 import {
     Search, Loader2, AlertCircle, CreditCard,
     ArrowUpCircle, ArrowDownCircle, Gift, Beer
@@ -20,11 +22,13 @@ export default function AccountHistoryPage() {
     const [data, setData] = useState<AccountHistoryResponse | null>(null)
     const [loading, setLoading] = useState(false)
 
+    const searchParams = useSearchParams()
+
     const search = async () => {
         if (!session || !uuid.trim()) return
         setLoading(true)
         try {
-            const result = await apiClient.getAccountHistory(session, uuid.trim())
+            const result = await apiClient.getAccountHistory(session, uuid.trim(), undefined)
             setData(result)
         } catch (e: any) {
             toast.error(e.message || 'Nie znaleziono konta')
@@ -37,6 +41,18 @@ export default function AccountHistoryPage() {
     const fmt = (v: number) => (v / 100).toFixed(2) + ' zł'
     const fmtMl = (v: number) => v + ' ml'
     const fmtDate = (d: string) => new Date(d).toLocaleString('pl-PL')
+
+
+    useEffect(() => {
+        const accountId = searchParams.get('account_id')
+        if (accountId && session && !data) {
+            setLoading(true)
+            apiClient.getAccountHistory(session, undefined, parseInt(accountId))
+                .then(result => setData(result))
+                .catch((e: any) => toast.error(e.message || 'Nie znaleziono konta'))
+                .finally(() => setLoading(false))
+        }
+    }, [searchParams, session])
 
     return (
         <div className="space-y-6">

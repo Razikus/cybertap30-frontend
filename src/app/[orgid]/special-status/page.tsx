@@ -55,7 +55,7 @@ export default function SpecialStatusPage() {
     const [searchQuery, setSearchQuery] = useState('')
     const [searching, setSearching] = useState(false)
     const [selectedStatusDefId, setSelectedStatusDefId] = useState<string>('')
-    const [assigning, setAssigning] = useState<number | null>(null) // account_id being assigned
+    const [assigning, setAssigning] = useState<string | null>(null)
     const [removeDialog, setRemoveDialog] = useState<SpecialStatusEntry | null>(null)
     const [removing, setRemoving] = useState(false)
 
@@ -102,7 +102,6 @@ export default function SpecialStatusPage() {
         }
     }, [orgId, fetchData])
 
-    // Search mobile users
     const handleSearch = useCallback(async () => {
         if (!session || !orgId || searchQuery.length < 3) return
 
@@ -121,15 +120,13 @@ export default function SpecialStatusPage() {
         }
     }, [session, orgId, searchQuery])
 
-    // Assign status
-    const handleAssign = useCallback(async (accountId: number) => {
+    const handleAssign = useCallback(async (mobileUserId: string) => {
         if (!session || !orgId || !selectedStatusDefId) return
 
-        setAssigning(accountId)
+        setAssigning(mobileUserId)
         try {
-            await apiClient.assignSpecialStatus(session, accountId, orgId, parseInt(selectedStatusDefId))
+            await apiClient.assignSpecialStatus(session, mobileUserId, orgId, parseInt(selectedStatusDefId))
             toast.success('Status nadany')
-            // Refresh list & clear search
             const users = await apiClient.listSpecialStatusUsers(session, orgId)
             setStatusUsers(users)
             setSearchResults([])
@@ -142,15 +139,14 @@ export default function SpecialStatusPage() {
         }
     }, [session, orgId, selectedStatusDefId])
 
-    // Remove status
     const handleRemove = useCallback(async () => {
         if (!session || !orgId || !removeDialog) return
 
         setRemoving(true)
         try {
-            await apiClient.removeSpecialStatus(session, removeDialog.account_id, orgId)
+            await apiClient.removeSpecialStatus(session, removeDialog.mobile_user_id, orgId)
             toast.success('Status usunięty')
-            setStatusUsers(prev => prev.filter(u => u.account_id !== removeDialog.account_id))
+            setStatusUsers(prev => prev.filter(u => u.mobile_user_id !== removeDialog.mobile_user_id))
             setRemoveDialog(null)
         } catch (error: any) {
             console.error('Remove failed:', error)
@@ -160,13 +156,8 @@ export default function SpecialStatusPage() {
         }
     }, [session, orgId, removeDialog])
 
-    // Check if account already has status
-    const accountHasStatus = useCallback((accountId: number) => {
-        return statusUsers.some(u => u.account_id === accountId)
-    }, [statusUsers])
-
-    const getStatusForAccount = useCallback((accountId: number) => {
-        return statusUsers.find(u => u.account_id === accountId)
+    const getStatusForUser = useCallback((mobileUserId: string) => {
+        return statusUsers.find(u => u.mobile_user_id === mobileUserId)
     }, [statusUsers])
 
     if (loading && !orgId) {
@@ -325,10 +316,10 @@ export default function SpecialStatusPage() {
                             {searchResults.length > 0 && (
                                 <div className="border rounded-lg divide-y">
                                     {searchResults.map((user) => {
-                                        const existing = getStatusForAccount(user.account_id)
+                                        const existing = getStatusForUser(user.user_id)
                                         return (
                                             <div
-                                                key={user.account_id}
+                                                key={user.user_id}
                                                 className="flex items-center justify-between p-3 hover:bg-muted/50"
                                             >
                                                 <div className="flex items-center gap-3 min-w-0">
@@ -336,7 +327,7 @@ export default function SpecialStatusPage() {
                                                     <div className="min-w-0">
                                                         <p className="font-medium truncate">{user.email}</p>
                                                         <p className="text-xs text-muted-foreground">
-                                                            Konto #{user.account_id}
+                                                            {user.has_linked_card ? `Konto #${user.account_id}` : 'Brak karty'}
                                                         </p>
                                                     </div>
                                                 </div>
@@ -348,10 +339,10 @@ export default function SpecialStatusPage() {
                                                     ) : null}
                                                     <Button
                                                         size="sm"
-                                                        onClick={() => handleAssign(user.account_id)}
-                                                        disabled={assigning === user.account_id || !selectedStatusDefId}
+                                                        onClick={() => handleAssign(user.user_id)}
+                                                        disabled={assigning === user.user_id || !selectedStatusDefId}
                                                     >
-                                                        {assigning === user.account_id ? (
+                                                        {assigning === user.user_id ? (
                                                             <Loader2 className="h-4 w-4 animate-spin" />
                                                         ) : (
                                                             <UserPlus className="h-4 w-4" />
@@ -406,7 +397,7 @@ export default function SpecialStatusPage() {
                                                     <div className="flex items-center gap-2">
                                                         <Mail className="h-3.5 w-3.5 text-muted-foreground" />
                                                         <span className="font-medium">
-                                                                {entry.email || '—'}
+                                                                {entry.email}
                                                             </span>
                                                     </div>
                                                 </td>
@@ -414,7 +405,7 @@ export default function SpecialStatusPage() {
                                                     <div className="flex items-center gap-2">
                                                         <CreditCard className="h-3.5 w-3.5 text-muted-foreground" />
                                                         <span className="text-sm font-mono">
-                                                                #{entry.account_id}
+                                                                {entry.has_linked_card ? `#${entry.account_id}` : 'Brak karty'}
                                                             </span>
                                                     </div>
                                                 </td>
@@ -429,7 +420,10 @@ export default function SpecialStatusPage() {
                                                         </span>
                                                 </td>
                                                 <td className="p-3 text-right font-mono text-sm">
-                                                    {(entry.cash / 100).toFixed(2)} zł
+                                                    {entry.has_linked_card
+                                                        ? `${(entry.cash / 100).toFixed(2)} zł`
+                                                        : '—'
+                                                    }
                                                 </td>
                                                 <td className="p-3 text-sm text-muted-foreground">
                                                     {new Date(entry.created_at).toLocaleDateString('pl-PL')}
@@ -461,8 +455,8 @@ export default function SpecialStatusPage() {
                     <DialogHeader>
                         <DialogTitle>Usuń status specjalny</DialogTitle>
                         <DialogDescription>
-                            Czy na pewno chcesz usunąć status <strong>{removeDialog?.status_name}</strong> z konta{' '}
-                            <strong>{removeDialog?.email || `#${removeDialog?.account_id}`}</strong>?
+                            Czy na pewno chcesz usunąć status <strong>{removeDialog?.status_name}</strong> z użytkownika{' '}
+                            <strong>{removeDialog?.email}</strong>?
                         </DialogDescription>
                     </DialogHeader>
                     <DialogFooter>

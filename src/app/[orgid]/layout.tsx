@@ -23,7 +23,9 @@ import {
   CreditCard,
   FlaskConical,
   Smartphone,
-  BadgeCheck
+  BadgeCheck,
+  Megaphone,
+  ArrowUpCircle
 } from "lucide-react"
 
 function OrganizationLayout({ children }: { children: React.ReactNode }) {
@@ -129,7 +131,7 @@ function OrganizationLayout({ children }: { children: React.ReactNode }) {
   ]
 
   const pubCategories = [
-    'devices', 'warehouse',
+    'devices', 'warehouse', 'topups',
     ...(hasManagerAccess ? ["promos", 'statistics', 'games'] : []),
   ]
 
@@ -186,6 +188,7 @@ function OrganizationLayout({ children }: { children: React.ReactNode }) {
       'game-test': 'Testowo',
       'mobile-stats': 'Aplikacja',
       'special-status': 'Statusy specjalne',
+      'topups': 'Doładowania',
     }
 
     return titleMap[lastPart] || 'Dashboard'
@@ -325,6 +328,11 @@ function OrganizationLayout({ children }: { children: React.ReactNode }) {
                                       case 'games':
                                         categoryName = 'Gry'
                                         CategoryIcon = Dices
+                                        break
+
+                                      case 'topups':
+                                        categoryName = 'Doładowania'
+                                        CategoryIcon = ArrowUpCircle  // albo CreditCard — co wolisz
                                         break
                                     }
 
