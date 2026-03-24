@@ -598,7 +598,7 @@ export default function OrganizationProductsPage() {
                   type="number"
                   value={product.defaultWarehouseVolume}
                   onChange={(e) => setProduct({ ...product, defaultWarehouseVolume: parseInt(e.target.value) || 5000 })}
-                  placeholder="5000"
+                  placeholder="30000"
               />
               <p className="text-xs text-muted-foreground mt-1">
                 Np. 5000ml, 20000ml
@@ -677,7 +677,7 @@ export default function OrganizationProductsPage() {
                     type="number"
                     step="0.1"
                     value={product.alcohol}
-                    onChange={(e) => setProduct({ ...product, alcohol: parseFloat(e.target.value) || 0 })}
+                    onChange={(e) => setProduct({ ...product, alcohol: parseFloat(e.target.value) || 0.5 })}
                 />
               </div>
             </div>
